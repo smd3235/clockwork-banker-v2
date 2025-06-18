@@ -1,4 +1,4 @@
-// In commands/staff/banksetup.js - FOR LOCAL TESTING ONLY (URL changed)
+// In commands/staff/banksetup.js - FINAL VERSION WITH REQUEST BUTTON LINKING TO YOUR OWN GITHUB PAGES
 
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const config = require('../../config');
@@ -28,15 +28,13 @@ module.exports = {
         const bankListButton = new ButtonBuilder() 
             .setLabel('🏦 View Full Bank')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://thj-dnt.web.app/bank'); // This URL should still work as it's live
+            .setURL('https://thj-dnt.web.app/bank'); // This remains the EXTERNAL guild bank website
 
-        // === CRITICAL CHANGE: Temporarily change Request button URL for LOCAL testing ===
-        // This will open Google.com. The point is to confirm the button ITSELF WORKS
-        // as a link button from Discord. Your local HTML cannot be opened directly by Discord.
-        const requestInstructionsURL = 'https://www.google.com'; // TEMPORARY: For local testing only!
+        // === CRITICAL CHANGE: Request button URL corrected to YOUR OWN GitHub Pages ===
+        const requestInstructionsURL = 'https://grumpy-gaming.github.io/clockwork-banker-v2/request-instructions.html'; // <--- THIS IS YOUR FINAL, CORRECT GITHUB PAGES URL!
 
         const requestButton = new ButtonBuilder()
-            .setLabel('🎒 Request Items (Test Link)') // Label indicating it's a test link
+            .setLabel('🎒 Request Items (Instructions)')
             .setStyle(ButtonStyle.Link)
             .setURL(requestInstructionsURL);
         // ==============================================================================
