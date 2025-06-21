@@ -1,4 +1,4 @@
-// In commands/staff/banksetup.js - FINAL VERSION WITH REQUEST BUTTON LINKING TO YOUR OWN GITHUB PAGES
+// In commands/staff/banksetup.js - FIXED VERSION WITH INTERACTIVE REQUEST BUTTON
 
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const config = require('../../config');
@@ -25,19 +25,17 @@ module.exports = {
             return interaction.editReply({ content: 'Please provide a valid text channel.', flags: MessageFlags.Ephemeral });
         }
 
+        // View Full Bank button - remains as link button
         const bankListButton = new ButtonBuilder() 
             .setLabel('🏦 View Full Bank')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://thj-dnt.web.app/bank'); // This remains the EXTERNAL guild bank website
+            .setURL('https://thj-dnt.web.app/bank'); // External guild bank website
 
-        // === CRITICAL CHANGE: Request button URL corrected to YOUR OWN GitHub Pages ===
-        const requestInstructionsURL = 'https://grumpy-gaming.github.io/clockwork-banker-v2/request-instructions.html'; // <--- THIS IS YOUR FINAL, CORRECT GITHUB PAGES URL!
-
+        // Request Items button - changed to interactive button
         const requestButton = new ButtonBuilder()
-            .setLabel('🎒 Request Items (Instructions)')
-            .setStyle(ButtonStyle.Link)
-            .setURL(requestInstructionsURL);
-        // ==============================================================================
+            .setLabel('🎒 Request Items')
+            .setStyle(ButtonStyle.Primary)  // Changed from Link to Primary
+            .setCustomId('persistent_request_instructions');  // Added custom ID for interaction
 
         const row = new ActionRowBuilder()
             .addComponents(bankListButton, requestButton); 
