@@ -1,2 +1,2 @@
-config.js
-.env
+./config.js
+./.env
