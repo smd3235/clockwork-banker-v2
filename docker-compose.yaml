@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  clockwork-banker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clockwork-banker-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    volumes:
+      # Optional: Mount logs directory if you add logging
+      - ./logs:/app/logs
+    networks:
+      - clockwork-network
+    # Resource limits for Raspberry Pi
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+networks:
+  clockwork-network:
+    driver: bridge
