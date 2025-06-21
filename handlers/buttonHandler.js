@@ -1,11 +1,10 @@
-// In handlers/buttonHandler.js - FINAL PRODUCTION VERSION (Request button handling removed)
+// In handlers/buttonHandler.js - UPDATED WITH REQUEST MODAL SUPPORT
 
-// Removed: ModalBuilder, TextInputBuilder, TextInputStyle as they are no longer used here
 const { userCarts, bankData, getHighestQuality } = require('../data/bankData');
 const { formatItemForRequest } = require('../utils/itemFormatting');
+const { createRequestModal } = require('../utils/modalUtils'); // Import the shared modal utility
 const config = require('../config');
-const { EmbedBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
-
+const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 
 // Helper function to get or create user cart
 function getUserCart(userId) {
@@ -31,14 +30,10 @@ function createCartButtons(userId) {
         );
 }
 
-
 async function handleButtonClick(interaction) {
-    // This handler will now ONLY process 'additem', 'cart', and 'bank_list' buttons.
-    // The 'request_instructions' button is now a pure link, so its click is NOT handled by the bot.
-    
     const [action, userId, ...rest] = interaction.customId.split('_');
     
-    // Only allow specific users for cart buttons
+    // Only allow specific users for cart buttons (but allow anyone to use persistent buttons)
     if (action !== 'persistent' && userId !== interaction.user.id) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         return interaction.followUp({
@@ -86,10 +81,12 @@ async function handleButtonClick(interaction) {
         } else if (action === 'persistent') {
             const persistentAction = rest[0];
 
-            // Removed: The 'request_instructions' handling block as it's now a pure link button
-            // if (persistentAction === 'request_instructions') { ... }
-
-            if (persistentAction === 'bank_list') {
+            if (persistentAction === 'request_instructions') {
+                // Show the request modal when the button is clicked
+                const modal = createRequestModal(interaction.user.id);
+                await interaction.showModal(modal);
+                return; // Important: return early since showModal handles the interaction
+            } else if (persistentAction === 'bank_list') {
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 const embed = new EmbedBuilder()
@@ -112,12 +109,13 @@ async function handleButtonClick(interaction) {
                     embeds: [embed],
                     flags: MessageFlags.Ephemeral
                 });
-            } else { // Fallback for any other unexpected persistent button customIds
-                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-                 await interaction.followUp({
-                     content: `Unhandled persistent button clicked: ${interaction.customId}.`,
-                     flags: MessageFlags.Ephemeral
-                 });
+            } else {
+                // Fallback for any other unexpected persistent button customIds
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                await interaction.followUp({
+                    content: `Unhandled persistent button clicked: ${interaction.customId}.`,
+                    flags: MessageFlags.Ephemeral
+                });
             }
         }
     } catch (error) {
