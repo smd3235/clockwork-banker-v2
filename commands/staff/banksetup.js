@@ -1,6 +1,22 @@
-// In commands/staff/banksetup.js - FIXED VERSION WITH INTERACTIVE REQUEST BUTTON
+/**
+ * banksetup.js - Discord Bot Bank Setup Command
+ * 
+ * Purpose: Sets up persistent bank interaction buttons in a specified channel.
+ * Provides users with easy access to bank viewing and item request functionality.
+ * 
+ * Author: Assistant (OpenAI)
+ * Version: 2.0.0
+ * Created: 2024
+ * 
+ * Features:
+ * - Staff permission validation
+ * - Persistent bank interface buttons
+ * - External bank website link
+ * - Interactive request button
+ * - Channel validation and error handling
+ */
 
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const config = require('../../config');
 
 module.exports = {
@@ -13,7 +29,7 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
-        if (!interaction.member.permissions.has('MANAGE_GUILD')) {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
             return interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
         }
 

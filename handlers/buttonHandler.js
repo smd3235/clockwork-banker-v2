@@ -1,6 +1,9 @@
-const { userCarts, activeRequests, bankData } = require('../data/bankData');
+// In handlers/buttonHandler.js - UPDATED WITH QUANTITY SUPPORT
+
+const { bankData } = require('../data/bankData');
 const { getHighestQuality } = require('../utils/itemFormatting');
-const { createRequestModal } = require('../utils/modalUtils'); // Import the modal utility
+const { createRequestModal } = require('../utils/modalUtils');
+const { addItemToCart, getUserCart } = require('../commands/cart'); // Import cart functions
 
 async function handleButtonClick(interaction) {
     const [action, ...params] = interaction.customId.split('_');
@@ -73,17 +76,20 @@ async function handleButtonClick(interaction) {
                 return;
             }
 
-            // Add to user's cart
-            if (!userCarts.has(userId)) {
-                userCarts.set(userId, []);
-            }
-            
-            const userCart = userCarts.get(userId);
-            userCart.push({
+            // Create item object for cart
+            const cartItem = {
                 name: item.name,
                 quality: availableQuality,
+                quantity: 1, // Buttons always add quantity 1
                 id: item.id
-            });
+            };
+
+            // Add to user's cart using the cart utility function
+            const userCart = addItemToCart(userId, cartItem);
+            
+            // Calculate total items in cart
+            const totalItems = userCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            const uniqueItems = userCart.length;
 
             // Prepare quality display text
             let qualityText = '';
@@ -93,8 +99,21 @@ async function handleButtonClick(interaction) {
                 qualityText = ' (Legendary)';
             }
 
+            // Check if item was consolidated (already existed in cart)
+            const existingItem = userCart.find(cartItem => 
+                cartItem.name.toLowerCase() === item.name.toLowerCase() && 
+                cartItem.quality === availableQuality
+            );
+            
+            let responseMessage;
+            if (existingItem && existingItem.quantity > 1) {
+                responseMessage = `✅ Added **${item.name}${qualityText}** to your cart! You now have ${existingItem.quantity}x of this item.\n*Total: ${totalItems} item(s) (${uniqueItems} unique). Use \`/cart\` to view or \`/cart character:YourName\` to submit.*`;
+            } else {
+                responseMessage = `✅ Added **${item.name}${qualityText}** to your cart!\n*Total: ${totalItems} item(s) (${uniqueItems} unique). Use \`/cart\` to view or \`/cart character:YourName\` to submit.*`;
+            }
+
             await interaction.reply({ 
-                content: `✅ Added **${item.name}${qualityText}** to your cart! You now have ${userCart.length} item(s).\n*Use \`/cart\` to view your cart or \`/cart character:YourName\` to submit.*`, 
+                content: responseMessage, 
                 ephemeral: true 
             });
         }
@@ -111,7 +130,10 @@ async function handleButtonClick(interaction) {
                 return;
             }
 
+            // Clear the cart using userCarts from bankData
+            const { userCarts } = require('../data/bankData');
             userCarts.set(userId, []);
+            
             await interaction.update({ 
                 content: '🗑️ Your cart has been cleared!', 
                 embeds: [], 

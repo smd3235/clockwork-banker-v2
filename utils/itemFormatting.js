@@ -1,4 +1,4 @@
-// In utils/itemFormatting.js - FINAL DEBUGGING VERSION
+// In utils/itemFormatting.js - UPDATED WITH QUANTITY SUPPORT
 
 // Helper function to parse bank file format (from bank.component.ts logic)
 function outputFileToJson(data, isSpellItemByIdFn, isSpellItemFn, enableDebugLogsForThisFile = false) {
@@ -59,6 +59,31 @@ function outputFileToJson(data, isSpellItemByIdFn, isSpellItemFn, enableDebugLog
     return items;
 }
 
+// Helper function to clean item names by removing trailing numbers and whitespace
+function cleanItemName(name) {
+    if (!name || typeof name !== 'string') {
+        return name;
+    }
+    
+    // Remove trailing numbers and whitespace patterns commonly found in inventory files
+    // This pattern removes:
+    // - Trailing numbers (like "Sword of Flame 123")
+    // - Trailing numbers with spaces (like "Sword of Flame  456")
+    // - Multiple trailing spaces
+    // - Combinations of the above
+    let cleaned = name
+        .replace(/\s+\d+\s*$/, '')     // Remove trailing numbers with optional spaces
+        .replace(/\s+$/, '')          // Remove any remaining trailing whitespace
+        .trim();                       // Final trim for safety
+    
+    // If cleaning resulted in an empty string, return the original
+    if (!cleaned) {
+        return name.trim();
+    }
+    
+    return cleaned;
+}
+
 // Helper function to encapsulate item processing and quality detection
 function processAndAddItem(name, id, count, location, itemsArrayToPushTo, isSpellItemByIdFn, isSpellItemFn, enableDebugLogs = false) {
     // === RE-ADDED ALL DEBUG LOGS FOR IS_SPELL_ITEM CHECK ===
@@ -82,6 +107,15 @@ function processAndAddItem(name, id, count, location, itemsArrayToPushTo, isSpel
         quality = 'legendary';
         actualName = actualName.substring(0, legendaryMatch.index).trim();
     }
+
+    // === CRITICAL FIX: Clean the item name after quality processing ===
+    const originalName = actualName;
+    actualName = cleanItemName(actualName);
+    
+    if (originalName !== actualName) {
+        console.log(`[DEBUG_NAME_CLEAN] Cleaned "${originalName}" -> "${actualName}"`);
+    }
+    // === END CRITICAL FIX ===
 
     if (quality === 'enchanted') {
         enchantedCount = count;
@@ -109,7 +143,7 @@ function processAndAddItem(name, id, count, location, itemsArrayToPushTo, isSpel
 
     const item = {
         id: id,
-        name: actualName, // Store the clean name without quality tags
+        name: actualName, // Store the clean name without quality tags AND trailing numbers
         baseCount: baseCount,
         enchantedCount: enchantedCount,
         legendaryCount: legendaryCount,
@@ -124,7 +158,6 @@ function processAndAddItem(name, id, count, location, itemsArrayToPushTo, isSpel
     itemsArrayToPushTo.push(item);
 }
 
-
 // Format item for display (used by search results)
 function formatItem(item) {
     const qualities = [];
@@ -136,15 +169,45 @@ function formatItem(item) {
     return `${item.name}${qualityText}`;
 }
 
-// Format item for request (no raw quality suffix if it's just raw)
+// Format item for request - NOW SUPPORTS QUANTITIES
 function formatItemForRequest(cartItem) {
+    let quantityPrefix = '';
     let qualityText = '';
+    
+    // Add quantity prefix only if greater than 1
+    if (cartItem.quantity && cartItem.quantity > 1) {
+        quantityPrefix = `${cartItem.quantity}x `;
+    }
+    
+    // Add quality suffix if not raw
     if (cartItem.quality === 'enchanted') {
         qualityText = ' (Enchanted)';
     } else if (cartItem.quality === 'legendary') {
         qualityText = ' (Legendary)';
     }
-    return `${cartItem.name}${qualityText}`;
+    
+    return `${quantityPrefix}${cartItem.name}${qualityText}`;
+}
+
+// Format item for cart display - specialized version for cart view
+function formatItemForCart(cartItem) {
+    let displayText = '';
+    
+    // Always show quantity in cart view for clarity
+    if (cartItem.quantity && cartItem.quantity > 1) {
+        displayText = `${cartItem.quantity}x `;
+    }
+    
+    displayText += cartItem.name;
+    
+    // Add quality suffix
+    if (cartItem.quality === 'enchanted') {
+        displayText += ' (Enchanted)';
+    } else if (cartItem.quality === 'legendary') {
+        displayText += ' (Legendary)';
+    }
+    
+    return displayText;
 }
 
 // Get available qualities for an item
@@ -168,6 +231,8 @@ module.exports = {
     outputFileToJson,
     formatItem,
     formatItemForRequest,
+    formatItemForCart,
     getAvailableQualities,
-    getHighestQuality
+    getHighestQuality,
+    cleanItemName  // Export the helper function for potential reuse
 };

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Deploy Clockwork Banker to Raspberry Pi
-# Run this script on your Raspberry Pi
+# Run this script from your project directory
 
 set -e
 
@@ -31,6 +31,13 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Check if we're in the project directory
+if [ ! -f "package.json" ]; then
+    print_error "This script must be run from the clockwork-banker project directory!"
+    print_error "Please cd into the directory containing package.json and run again."
+    exit 1
+fi
+
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     print_error "Docker is not installed. Please install Docker first."
@@ -39,53 +46,100 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
+if ! docker compose version &> /dev/null; then
     print_error "Docker Compose is not installed. Please install Docker Compose first."
     echo "Run: sudo apt-get update && sudo apt-get install docker-compose-plugin"
     exit 1
 fi
 
-# Create project directory
-PROJECT_DIR="$HOME/clockwork-banker"
-print_status "Creating project directory at $PROJECT_DIR"
-mkdir -p "$PROJECT_DIR"
-cd "$PROJECT_DIR"
+# Check for required files
+print_status "Checking for required files..."
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    print_warning ".env file not found. Please create one from .env.template"
-    if [ -f ".env.template" ]; then
-        cp .env.template .env
-        print_status "Created .env from template. Please edit it with your actual values."
-        echo "Edit with: nano .env"
-        read -p "Press Enter after you've configured your .env file..."
-    else
-        print_error "No .env.template found. Please create .env manually with required environment variables."
-        exit 1
-    fi
+# Check for config.js
+if [ ! -f "config.js" ]; then
+    print_error "config.js not found in current directory!"
+    print_status "Please create config.js with your Discord bot token and Firebase configuration."
+    echo "Example config.js:"
+    echo "module.exports = {"
+    echo "    token: 'YOUR_DISCORD_BOT_TOKEN_HERE',"
+    echo "    bankChannelName: 'bank-requests',"
+    echo "    bankApiUrl: 'https://thj-dnt.web.app/assets/',"
+    echo "    firebase: {"
+    echo "        apiKey: 'YOUR_FIREBASE_API_KEY',"
+    echo "        authDomain: 'thj-dnt.firebaseapp.com',"
+    echo "        projectId: 'thj-dnt',"
+    echo "        storageBucket: 'thj-dnt.appspot.com',"
+    echo "        messagingSenderId: '123456789',"
+    echo "        appId: '1:123456789:web:abcdef123456789'"
+    echo "    }"
+    echo "};"
+    exit 1
+else
+    print_success "config.js found!"
 fi
 
-# Create logs directory
+# Check for .env file (if using environment variables approach)
+if [ -f ".env" ]; then
+    print_success ".env file found!"
+else
+    print_warning ".env file not found. This is OK if you're using config.js for all configuration."
+fi
+
+# Check for docker-compose.yaml
+if [ ! -f "docker-compose.yaml" ] && [ ! -f "docker-compose.yml" ]; then
+    print_error "docker-compose.yaml not found!"
+    exit 1
+else
+    print_success "docker-compose.yaml found!"
+fi
+
+# Check for Dockerfile
+if [ ! -f "Dockerfile" ]; then
+    print_error "Dockerfile not found!"
+    exit 1
+else
+    print_success "Dockerfile found!"
+fi
+
+# Create logs directory if it doesn't exist
 mkdir -p logs
+print_status "Created/verified logs directory"
+
+# Stop any existing container
+print_status "Checking for existing containers..."
+if docker compose ps | grep -q "clockwork-banker"; then
+    print_status "Stopping existing container..."
+    docker compose down
+fi
 
 # Build and start the container
 print_status "Building Docker image..."
-docker-compose build
+docker compose build --no-cache
 
 print_status "Starting Clockwork Banker container..."
-docker-compose up -d
+docker compose up -d
 
 # Wait a moment for the container to start
+print_status "Waiting for container to initialize..."
 sleep 5
 
 # Check if container is running
-if docker-compose ps | grep -q "Up"; then
+if docker compose ps | grep -q "Up"; then
     print_success "Clockwork Banker is now running!"
-    print_status "To view logs: docker-compose logs -f"
-    print_status "To stop: docker-compose down"
-    print_status "To restart: docker-compose restart"
+    echo ""
+    print_status "Useful commands:"
+    echo "  View logs:        docker compose logs -f"
+    echo "  Stop bot:         docker compose down"
+    echo "  Restart bot:      docker compose restart"
+    echo "  View status:      docker compose ps"
+    echo ""
+    
+    # Show initial logs
+    print_status "Showing initial logs (Ctrl+C to exit):"
+    docker compose logs -f --tail=50
 else
-    print_error "Container failed to start. Check logs with: docker-compose logs"
+    print_error "Container failed to start. Checking logs..."
+    docker compose logs
     exit 1
 fi
 
